@@ -154,6 +154,7 @@ export DB_PORT=5433
 export DB_USERNAME=claimwise
 export DB_PASSWORD=claimwise
 export HUGGINGFACE_API_KEY=your_hf_token_here
+export GROQ_API_KEY=your_groq_api_key_here
 
 ./mvnw spring-boot:run
 ```
@@ -164,7 +165,7 @@ The application starts on `http://localhost:8080`. Flyway automatically executes
 
 ## How to Run Tests
 
-The test suite executes 73 automated tests covering Stage 1 and Stage 2:
+The test suite executes 92 automated tests covering Stage 1, Stage 2, and Stage 3:
 
 ```bash
 ./mvnw clean test
@@ -178,7 +179,9 @@ The test suite executes 73 automated tests covering Stage 1 and Stage 2:
 - **Embedding Service**: Deterministic unit vectors, 384 dimensions verification, format conversion.
 - **Policy Document Service**: Ingestion pipeline orchestration (extract -> chunk -> embed -> persist).
 - **Retrieval Service**: Cosine similarity query execution and DTO mapping.
-- **Controllers (MockMvc)**: HTTP status codes (201, 200, 400, 404, 409), input validation, response formats.
+- **Groq LLM Service**: Spring RestClient integration, timeout handling, error mapping (401, 429, 5xx), response parsing.
+- **Policy RAG Service**: Similarity threshold filtering (>= 0.60), zero-context short-circuiting, prompt injection protection.
+- **Controllers (MockMvc)**: HTTP status codes (201, 200, 400, 404, 409, 429, 502), input validation, response formats.
 - **Repository Integration**: Tests database persistence, foreign keys, and unique constraints.
 
 ---
@@ -272,6 +275,51 @@ POST /api/v1/retrieval/search
       "metadata": "{\"charStart\": 5850, \"charEnd\": 6350}"
     }
   ]
+}
+```
+
+### Policy Intelligence & Q&A Endpoints (Stage 3)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/policies/{policyId}/ask` | Ask question about a policy using grounded RAG answer generation |
+
+#### Example Policy Q&A Request
+
+```json
+POST /api/v1/policies/1/ask
+{
+  "question": "Does this policy cover sudden water damage from broken pipes?"
+}
+```
+
+#### Example Grounded Q&A Response (Context Found)
+
+```json
+{
+  "question": "Does this policy cover sudden water damage from broken pipes?",
+  "answer": "Yes, the policy covers sudden and accidental water damage resulting from plumbing failure up to the policy limit of $25,000, subject to a $500 deductible. Gradual seepage or continuous leakage is explicitly excluded.",
+  "policyId": 1,
+  "sources": [
+    {
+      "chunkId": 12,
+      "documentId": 1,
+      "chunkIndex": 2,
+      "similarityScore": 0.8842,
+      "snippet": "Section 4.2 - Water Damage: Sudden and accidental discharge of water from plumbing systems is covered up to $25,000..."
+    }
+  ]
+}
+```
+
+#### Example Q&A Response (Insufficient Context / Below Similarity Threshold)
+
+```json
+{
+  "question": "Does this policy cover damage from extraterrestrial impacts?",
+  "answer": "The provided policy documents do not contain sufficient information to answer this question.",
+  "policyId": 1,
+  "sources": []
 }
 ```
 

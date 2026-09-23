@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: claimwise-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-claimwise}
+      POSTGRES_USER: ${POSTGRES_USER:-claimwise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-claimwise}
+    ports:
+      # Host port defaults to 5433 to avoid conflict with local Homebrew PostgreSQL on 5432
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - claimwise_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-claimwise} -d ${POSTGRES_DB:-claimwise}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claimwise-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-claimwise}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-claimwise}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-claimwise}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+volumes:
+  claimwise_pgdata:

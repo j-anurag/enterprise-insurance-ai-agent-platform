@@ -3,8 +3,6 @@ package com.claimwise.model;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,44 +19,38 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "policies")
+@Table(name = "policy_documents")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Policy {
+public class PolicyDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "policy_number", nullable = false, unique = true, length = 50)
-    private String policyNumber;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @JoinColumn(name = "policy_id", nullable = false)
+    private Policy policy;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "policy_type", nullable = false, length = 50)
-    private PolicyType policyType;
+    @Column(name = "document_name", nullable = false, length = 255)
+    private String documentName;
 
-    @Column(name = "start_date", nullable = false)
-    private LocalDate startDate;
+    @Column(name = "document_type", nullable = false, length = 100)
+    private String documentType;
 
-    @Column(name = "expiry_date", nullable = false)
-    private LocalDate expiryDate;
+    @Column(name = "storage_reference", nullable = false, length = 500)
+    private String storageReference;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 50)
-    private PolicyStatus status;
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -66,13 +58,9 @@ public class Policy {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Claim> claims = new ArrayList<>();
-
-    @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<PolicyDocument> documents = new ArrayList<>();
+    private List<DocumentChunk> chunks = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

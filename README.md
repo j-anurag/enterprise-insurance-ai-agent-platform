@@ -39,8 +39,8 @@ Before running the application, make sure you have:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/j-anurag/enterprise-insurance-ii-agent-platform.git
-   cd enterprise-insurance-ii-agent-platform
+   git clone https://github.com/j-anurag/enterprise-insurance-ai-agent-platform.git
+   cd enterprise-insurance-ai-agent-platform
    ```
 
 2. **Configure Database**:

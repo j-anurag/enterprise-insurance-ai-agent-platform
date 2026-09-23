@@ -4,6 +4,7 @@ import com.claimwise.model.Claim;
 import com.claimwise.model.ClaimStatus;
 import com.claimwise.model.Customer;
 import com.claimwise.model.Policy;
+import com.claimwise.model.PolicyDocument;
 import com.claimwise.model.PolicyStatus;
 import com.claimwise.model.PolicyType;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class RepositoryIntegrationTest {
 
     @Autowired
     private ClaimRepository claimRepository;
+
+    @Autowired
+    private PolicyDocumentRepository policyDocumentRepository;
 
     @Test
     @DisplayName("Should persist and retrieve customer with unique constraints")
@@ -137,5 +141,44 @@ class RepositoryIntegrationTest {
         assertThat(claims).hasSize(1);
         assertThat(claims.get(0).getClaimNumber()).isEqualTo("CLM-IT-001");
         assertThat(claims.get(0).getPolicy().getId()).isEqualTo(policy.getId());
+    }
+
+    @Test
+    @DisplayName("Should persist policy document linked to policy and retrieve by policy ID")
+    void shouldPersistAndRetrievePolicyDocument() {
+        Customer customer = customerRepository.save(Customer.builder()
+                .customerNumber("CUST-DOC-01")
+                .fullName("Doc Customer")
+                .email("doc-customer@example.com")
+                .build());
+
+        Policy policy = policyRepository.save(Policy.builder()
+                .policyNumber("POL-DOC-001")
+                .customer(customer)
+                .policyType(PolicyType.HEALTH)
+                .startDate(LocalDate.now())
+                .expiryDate(LocalDate.now().plusYears(1))
+                .status(PolicyStatus.ACTIVE)
+                .build());
+
+        PolicyDocument document = PolicyDocument.builder()
+                .policy(policy)
+                .documentName("health_schedule.pdf")
+                .documentType("application/pdf")
+                .storageReference("/docs/health_schedule.pdf")
+                .extractedText("Health insurance benefits and schedule.")
+                .build();
+
+        PolicyDocument savedDoc = policyDocumentRepository.save(document);
+
+        assertThat(savedDoc.getId()).isNotNull();
+        assertThat(savedDoc.getDocumentName()).isEqualTo("health_schedule.pdf");
+        assertThat(savedDoc.getPolicy().getId()).isEqualTo(policy.getId());
+
+        List<PolicyDocument> docs = policyDocumentRepository.findByPolicyId(policy.getId());
+        assertThat(docs).hasSize(1);
+        assertThat(docs.get(0).getDocumentName()).isEqualTo("health_schedule.pdf");
+        assertThat(policyDocumentRepository.existsByPolicyIdAndDocumentName(policy.getId(), "health_schedule.pdf")).isTrue();
+        assertThat(policyDocumentRepository.existsByPolicyIdAndDocumentName(policy.getId(), "other.pdf")).isFalse();
     }
 }
